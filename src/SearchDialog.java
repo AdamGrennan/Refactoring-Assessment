@@ -74,6 +74,4 @@ public abstract class SearchDialog extends JDialog implements ActionListener {
 	}
 	
 	protected abstract void search();
-	
-	
 }

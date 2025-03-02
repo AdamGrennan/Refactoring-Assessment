@@ -22,9 +22,6 @@ import javax.swing.JTextField;
 import javax.swing.border.EtchedBorder;
 
 public class SearchByIdDialog extends SearchDialog{
-	EmployeeDetails parent;
-	JButton search, cancel;
-	JTextField searchField;
 
 	public SearchByIdDialog(EmployeeDetails parent) {
 		super(parent, "ID", "Search by ID");
