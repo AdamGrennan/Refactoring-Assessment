@@ -12,6 +12,7 @@ import java.util.ArrayList;
 import javax.swing.JOptionPane;
 
 public class RandomFile {
+	private static RandomFile instance;
 	private RandomAccessFile output;
 	private RandomAccessFile input;
 

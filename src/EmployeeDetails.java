@@ -85,6 +85,11 @@ public class EmployeeDetails extends JFrame implements ActionListener, ItemListe
 	String[] department = { "", "Administration", "Production", "Transport", "Management" };
 	// full time combo box values
 	String[] fullTime = { "", "Yes", "No" };
+	
+	public Employee getCurrentEmployee() {
+	    return currentEmployee;
+	}
+
 
 	// initialize menu bar
 	private JMenuBar menuBar() {
@@ -356,7 +361,7 @@ public class EmployeeDetails extends JFrame implements ActionListener, ItemListe
 	}// end displaySearchBySurnameDialog
 
 	// find byte start in file for first active record
-	private void firstRecord() {
+	public void firstRecord() {
 		// if any active record in file look for first record
 		if (isSomeoneToDisplay()) {
 			// open file for reading
@@ -373,7 +378,7 @@ public class EmployeeDetails extends JFrame implements ActionListener, ItemListe
 	}// end firstRecord
 
 	// find byte start in file for previous active record
-	private void previousRecord() {
+	public void previousRecord() {
 		// if any active record in file look for first record
 		if (isSomeoneToDisplay()) {
 			// open file for reading
@@ -394,7 +399,7 @@ public class EmployeeDetails extends JFrame implements ActionListener, ItemListe
 	}// end previousRecord
 
 	// find byte start in file for next active record
-	private void nextRecord() {
+	public void nextRecord() {
 		// if any active record in file look for first record
 		if (isSomeoneToDisplay()) {
 			// open file for reading
@@ -415,7 +420,7 @@ public class EmployeeDetails extends JFrame implements ActionListener, ItemListe
 	}// end nextRecord
 
 	// find byte start in file for last active record
-	private void lastRecord() {
+	public void lastRecord() {
 		// if any active record in file look for first record
 		if (isSomeoneToDisplay()) {
 			// open file for reading
@@ -980,6 +985,7 @@ public class EmployeeDetails extends JFrame implements ActionListener, ItemListe
 
 	// action listener for buttons, text field and menu items
 	public void actionPerformed(ActionEvent e) {
+		 Command command = null;
 
 		if (e.getSource() == closeApp) {
 			if (checkInput() && !checkForChanges())
@@ -1012,23 +1018,19 @@ public class EmployeeDetails extends JFrame implements ActionListener, ItemListe
 			cancelChange();
 		else if (e.getSource() == firstItem || e.getSource() == first) {
 			if (checkInput() && !checkForChanges()) {
-				firstRecord();
-				displayRecords(currentEmployee);
+				command = new FirstCommand(this);
 			}
 		} else if (e.getSource() == prevItem || e.getSource() == previous) {
 			if (checkInput() && !checkForChanges()) {
-				previousRecord();
-				displayRecords(currentEmployee);
+				command = new PreviousCommand(this);
 			}
 		} else if (e.getSource() == nextItem || e.getSource() == next) {
 			if (checkInput() && !checkForChanges()) {
-				nextRecord();
-				displayRecords(currentEmployee);
+				command = new NextCommand(this);
 			}
 		} else if (e.getSource() == lastItem || e.getSource() == last) {
 			if (checkInput() && !checkForChanges()) {
-				lastRecord();
-				displayRecords(currentEmployee);
+				command = new LastCommand(this);
 			}
 		} else if (e.getSource() == listAll || e.getSource() == displayAll) {
 			if (checkInput() && !checkForChanges())
@@ -1046,6 +1048,10 @@ public class EmployeeDetails extends JFrame implements ActionListener, ItemListe
 		} else if (e.getSource() == searchBySurname) {
 			if (checkInput() && !checkForChanges())
 				new SearchBySurnameDialog(EmployeeDetails.this);
+		}
+		
+		if(command != null) {
+			command.execute();
 		}
 	}// end actionPerformed
 
