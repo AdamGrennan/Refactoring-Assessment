@@ -21,7 +21,7 @@ class FirstCommand implements Command {
 
 	    public void execute() {
 	        details.firstRecord();
-	        details.displayRecords(details.getCurrentEmployee());
+	        details.notifyAllObservers(); 
 	    }
 	}
 
@@ -33,7 +33,7 @@ class LastCommand implements Command {
     }
 	  public void execute() {
 		  details.lastRecord();
-	      details.displayRecords(details.getCurrentEmployee());
+		  details.notifyAllObservers(); 
 	  }
 	}
 
@@ -45,7 +45,7 @@ class NextCommand implements Command {
     }
 	  public void execute() {
 		  details.nextRecord();
-	      details.displayRecords(details.getCurrentEmployee());
+		  details.notifyAllObservers(); 
 	  }
 	}
 
@@ -58,7 +58,7 @@ class PreviousCommand implements Command {
     }
 	  public void execute() {
 		  details.previousRecord();
-	      details.displayRecords(details.getCurrentEmployee());
+		  details.notifyAllObservers(); 
 	  }
 	}
 

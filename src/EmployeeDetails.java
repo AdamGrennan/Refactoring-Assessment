@@ -23,6 +23,8 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
 import java.text.DecimalFormat;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Random;
 import java.util.Vector;
 
@@ -50,6 +52,7 @@ import javax.swing.filechooser.FileNameExtensionFilter;
 import net.miginfocom.swing.MigLayout;
 
 public class EmployeeDetails extends JFrame implements ActionListener, ItemListener, DocumentListener, WindowListener {
+
 	// decimal format for inactive currency text field
 	private static final DecimalFormat format = new DecimalFormat("\u20ac ###,###,##0.00");
 	// decimal format for active currency text field
@@ -69,8 +72,8 @@ public class EmployeeDetails extends JFrame implements ActionListener, ItemListe
 			searchBySurname, listAll, closeApp;
 	private JButton first, previous, next, last, add, edit, deleteButton, displayAll, searchId, searchSurname,
 			saveChange, cancelChange;
-	private JComboBox<String> genderCombo, departmentCombo, fullTimeCombo;
-	private JTextField idField, ppsField, surnameField, firstNameField, salaryField;
+	public JComboBox<String> genderCombo, departmentCombo, fullTimeCombo;
+	public JTextField idField, ppsField, surnameField, firstNameField, salaryField;
 	private static EmployeeDetails frame = new EmployeeDetails();
 	// font for labels, text fields and combo boxes
 	Font font1 = new Font("SansSerif", Font.BOLD, 16);
@@ -85,11 +88,31 @@ public class EmployeeDetails extends JFrame implements ActionListener, ItemListe
 	String[] department = { "", "Administration", "Production", "Transport", "Management" };
 	// full time combo box values
 	String[] fullTime = { "", "Yes", "No" };
+
+	private List<Observer> observers = new ArrayList<Observer>();
+
 	
 	public Employee getCurrentEmployee() {
 	    return currentEmployee;
 	}
 
+	public void attach(Observer observer){ observers.add(observer); }
+	public void detach(Observer o){observers.remove(o);}
+	public void notifyAllObservers(){
+		 System.out.println("Notifying observers...");
+		for (Observer observer : observers) {
+		observer.update(currentEmployee);
+		}
+	}
+	public void displayRecords(Employee thisEmployee) {
+	    this.currentEmployee = thisEmployee;
+		if (thisEmployee == null) {
+		} else if (thisEmployee.getEmployeeId() == 0) {
+		} else {
+	    notifyAllObservers();
+		}
+	    change = false;
+	}
 
 	// initialize menu bar
 	private JMenuBar menuBar() {
@@ -294,54 +317,14 @@ public class EmployeeDetails extends JFrame implements ActionListener, ItemListe
 				});
 			} // end else if
 		} // end for
+		EmployeeDetailsObserver observer = new EmployeeDetailsObserver(this, idField, ppsField, surnameField, 
+                firstNameField, salaryField, genderCombo, 
+                departmentCombo, fullTimeCombo);
+		attach(observer);
 		return empDetails;
+		
 	}// end detailsPanel
 
-	// display current Employee details
-	public void displayRecords(Employee thisEmployee) {
-		int countGender = 0;
-		int countDep = 0;
-		boolean found = false;
-
-		searchByIdField.setText("");
-		searchBySurnameField.setText("");
-		// if Employee is null or ID is 0 do nothing else display Employee
-		// details
-		if (thisEmployee == null) {
-		} else if (thisEmployee.getEmployeeId() == 0) {
-		} else {
-			// find corresponding gender combo box value to current employee
-			while (!found && countGender < gender.length - 1) {
-				if (Character.toString(thisEmployee.getGender()).equalsIgnoreCase(gender[countGender]))
-					found = true;
-				else
-					countGender++;
-			} // end while
-			found = false;
-			// find corresponding department combo box value to current employee
-			while (!found && countDep < department.length - 1) {
-				if (thisEmployee.getDepartment().trim().equalsIgnoreCase(department[countDep]))
-					found = true;
-				else
-					countDep++;
-			} // end while
-			idField.setText(Integer.toString(thisEmployee.getEmployeeId()));
-			ppsField.setText(thisEmployee.getPps().trim());
-			surnameField.setText(thisEmployee.getSurname().trim());
-			firstNameField.setText(thisEmployee.getFirstName());
-			genderCombo.setSelectedIndex(countGender);
-			departmentCombo.setSelectedIndex(countDep);
-			salaryField.setText(format.format(thisEmployee.getSalary()));
-			// set corresponding full time combo box value to current employee
-			if (thisEmployee.getFullTime() == true)
-				fullTimeCombo.setSelectedIndex(1);
-			else
-				fullTimeCombo.setSelectedIndex(2);
-		}
-		change = false;
-	}// end display records
-
-	// display Employee summary dialog
 	private void displayEmployeeSummaryDialog() {
 		// display Employee summary dialog if these is someone to display
 		if (isSomeoneToDisplay())
@@ -540,11 +523,14 @@ public class EmployeeDetails extends JFrame implements ActionListener, ItemListe
 		Employee theEmployee;
 		if (((String) fullTimeCombo.getSelectedItem()).equalsIgnoreCase("Yes"))
 			fullTime = true;
+		
+		 String salaryText = salaryField.getText().replace("€", "").replace(",", "").trim();
+		    double salary = Double.parseDouble(salaryText); 
 
 		theEmployee = new Employee(Integer.parseInt(idField.getText()), ppsField.getText().toUpperCase(),
 				surnameField.getText().toUpperCase(), firstNameField.getText().toUpperCase(),
 				genderCombo.getSelectedItem().toString().charAt(0), departmentCombo.getSelectedItem().toString(),
-				Double.parseDouble(salaryField.getText()), fullTime);
+				salary, fullTime);
 
 		return theEmployee;
 	}// end getChangedDetails
@@ -1017,19 +1003,19 @@ public class EmployeeDetails extends JFrame implements ActionListener, ItemListe
 		} else if (e.getSource() == cancelChange)
 			cancelChange();
 		else if (e.getSource() == firstItem || e.getSource() == first) {
-			if (checkInput() && !checkForChanges()) {
+			if (checkInput()) {
 				command = new FirstCommand(this);
 			}
 		} else if (e.getSource() == prevItem || e.getSource() == previous) {
-			if (checkInput() && !checkForChanges()) {
+			if (checkInput()) {
 				command = new PreviousCommand(this);
 			}
 		} else if (e.getSource() == nextItem || e.getSource() == next) {
-			if (checkInput() && !checkForChanges()) {
+			if (checkInput()) {
 				command = new NextCommand(this);
 			}
 		} else if (e.getSource() == lastItem || e.getSource() == last) {
-			if (checkInput() && !checkForChanges()) {
+			if (checkInput()) {
 				command = new LastCommand(this);
 			}
 		} else if (e.getSource() == listAll || e.getSource() == displayAll) {
@@ -1139,4 +1125,5 @@ public class EmployeeDetails extends JFrame implements ActionListener, ItemListe
 
 	public void windowOpened(WindowEvent e) {
 	}
+	
 }// end class EmployeeDetails
