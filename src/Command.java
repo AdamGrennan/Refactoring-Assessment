@@ -1,5 +1,5 @@
 
-interface Command {
+public interface Command {
 	void execute();
 }
 
@@ -21,7 +21,7 @@ class FirstCommand implements Command {
 
 	    public void execute() {
 	        details.firstRecord();
-	        details.notifyAllObservers(); 
+	        details.updateView(); 
 	    }
 	}
 
@@ -33,7 +33,7 @@ class LastCommand implements Command {
     }
 	  public void execute() {
 		  details.lastRecord();
-		  details.notifyAllObservers(); 
+		  details.updateView(); 
 	  }
 	}
 
@@ -45,7 +45,7 @@ class NextCommand implements Command {
     }
 	  public void execute() {
 		  details.nextRecord();
-		  details.notifyAllObservers(); 
+		  details.updateView(); 
 	  }
 	}
 
@@ -58,7 +58,7 @@ class PreviousCommand implements Command {
     }
 	  public void execute() {
 		  details.previousRecord();
-		  details.notifyAllObservers(); 
+		  details.updateView(); 
 	  }
 	}
 
