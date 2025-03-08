@@ -60,8 +60,8 @@ public class EmployeeDetails extends JFrame implements ActionListener, ItemListe
 			searchBySurname, listAll, closeApp;
 	private JButton first, previous, next, last, add, edit, deleteButton, displayAll, searchId, searchSurname,
 			saveChange, cancelChange;
-	public JComboBox<String> genderCombo, departmentCombo, fullTimeCombo;
-	public JTextField idField, ppsField, surnameField, firstNameField, salaryField;
+	private JComboBox<String> genderCombo, departmentCombo, fullTimeCombo;
+	private JTextField idField, ppsField, surnameField, firstNameField, salaryField;
 	private static EmployeeDetails frame = new EmployeeDetails();
 	// font for labels, text fields and combo boxes
 	Font font1 = new Font("SansSerif", Font.BOLD, 16);
@@ -85,6 +85,7 @@ public class EmployeeDetails extends JFrame implements ActionListener, ItemListe
 	public EmployeeDetails() {
 		 fileManager = new FileManager(this);
 		 file = fileManager.getFile();
+		
 	}
 	
 	public void updateView() {
@@ -111,7 +112,6 @@ public class EmployeeDetails extends JFrame implements ActionListener, ItemListe
 	public void attach(Observer observer){ observers.add(observer); }
 	public void detach(Observer o){observers.remove(o);}
 	public void notifyAllObservers(){
-			System.out.println("Notifying observers...");
 			for (Observer observer : observers) {
 			observer.update(currentEmployee);
 			
@@ -360,79 +360,29 @@ public class EmployeeDetails extends JFrame implements ActionListener, ItemListe
 
 	// find byte start in file for first active record
 	public void firstRecord() {
-		// if any active record in file look for first record
-		if (isSomeoneToDisplay()) {
-			// open file for reading
-			application.openReadFile(file.getAbsolutePath());
-			// get byte start in file for first record
-			currentByteStart = application.getFirst();
-			// assign current Employee to first record in file
-			currentEmployee = application.readRecords(currentByteStart);
-			application.closeReadFile();// close file for reading
-			// if first record is inactive look for next record
-			if (currentEmployee.getEmployeeId() == 0)
-				nextRecord();// look for next record
-		} // end if
-	}// end firstRecord
+	    invoker.setCommand(new FirstCommand(this, file));
+	    invoker.executeCommand();
+	    notifyAllObservers();  
+	}
 
-	// find byte start in file for previous active record
 	public void previousRecord() {
-		// if any active record in file look for first record
-		if (isSomeoneToDisplay()) {
-			// open file for reading
-			application.openReadFile(file.getAbsolutePath());
-			// get byte start in file for previous record
-			currentByteStart = application.getPrevious(currentByteStart);
-			// assign current Employee to previous record in file
-			currentEmployee = application.readRecords(currentByteStart);
-			// loop to previous record until Employee is active - ID is not 0
-			while (currentEmployee.getEmployeeId() == 0) {
-				// get byte start in file for previous record
-				currentByteStart = application.getPrevious(currentByteStart);
-				// assign current Employee to previous record in file
-				currentEmployee = application.readRecords(currentByteStart);
-			} // end while
-			application.closeReadFile();// close file for reading
-		}
-	}// end previousRecord
+	    invoker.setCommand(new PreviousCommand(this, file));
+	    invoker.executeCommand();
+	    notifyAllObservers();
+	}
 
-	// find byte start in file for next active record
 	public void nextRecord() {
-		// if any active record in file look for first record
-		if (isSomeoneToDisplay()) {
-			// open file for reading
-			application.openReadFile(file.getAbsolutePath());
-			// get byte start in file for next record
-			currentByteStart = application.getNext(currentByteStart);
-			// assign current Employee to record in file
-			currentEmployee = application.readRecords(currentByteStart);
-			// loop to previous next until Employee is active - ID is not 0
-			while (currentEmployee.getEmployeeId() == 0) {
-				// get byte start in file for next record
-				currentByteStart = application.getNext(currentByteStart);
-				// assign current Employee to next record in file
-				currentEmployee = application.readRecords(currentByteStart);
-			} // end while
-			application.closeReadFile();// close file for reading
-		} // end if
-	}// end nextRecord
+	    invoker.setCommand(new NextCommand(this, file));
+	    invoker.executeCommand();
+	    notifyAllObservers();
+	}
 
-	// find byte start in file for last active record
 	public void lastRecord() {
-		// if any active record in file look for first record
-		if (isSomeoneToDisplay()) {
-			// open file for reading
-			application.openReadFile(file.getAbsolutePath());
-			// get byte start in file for last record
-			currentByteStart = application.getLast();
-			// assign current Employee to first record in file
-			currentEmployee = application.readRecords(currentByteStart);
-			application.closeReadFile();// close file for reading
-			// if last record is inactive look for previous record
-			if (currentEmployee.getEmployeeId() == 0)
-				previousRecord();// look for previous record
-		} // end if
-	}// end lastRecord
+	    invoker.setCommand(new LastCommand(this, file));
+	    invoker.executeCommand();
+	    notifyAllObservers();
+	}
+
 
 	// search Employee by ID
 	public void searchEmployeeById() {
@@ -813,12 +763,7 @@ public class EmployeeDetails extends JFrame implements ActionListener, ItemListe
 
 
 
-	
-
-
-
 	public void actionPerformed(ActionEvent e) {
-	    Command command = null; 
 	    boolean validInput = checkInput() && !checkForChanges();
 
 	    if (e.getSource() == closeApp) {
@@ -844,13 +789,13 @@ public class EmployeeDetails extends JFrame implements ActionListener, ItemListe
 	    } else if (e.getSource() == cancelChange) {
 	        cancelChange();
 	    } else if (e.getSource() == firstItem || e.getSource() == first) {
-	        command = new FirstCommand(this);
+	        firstRecord();
 	    } else if (e.getSource() == prevItem || e.getSource() == previous) {
-	        command = new PreviousCommand(this);
+	        previousRecord();
 	    } else if (e.getSource() == nextItem || e.getSource() == next) {
-	        command = new NextCommand(this);
+	       nextRecord();
 	    } else if (e.getSource() == lastItem || e.getSource() == last) {
-	        command = new LastCommand(this);
+	        lastRecord();
 	    } else if (e.getSource() == listAll || e.getSource() == displayAll) {
 	        if (validInput && isSomeoneToDisplay()) {
 	            displayEmployeeSummaryDialog();
@@ -863,11 +808,6 @@ public class EmployeeDetails extends JFrame implements ActionListener, ItemListe
 	        if (validInput) deleteRecord();
 	    } else if (e.getSource() == searchBySurname) {
 	        if (validInput) new SearchBySurnameDialog(EmployeeDetails.this);
-	    }
-
-	    if (command != null) {
-	        invoker.setCommand(command);
-	        invoker.executeCommand();
 	    }
 	} 
 
@@ -954,6 +894,11 @@ public class EmployeeDetails extends JFrame implements ActionListener, ItemListe
 	}
 
 	public void windowOpened(WindowEvent e) {
+	}
+
+	public void setCurrentByteStart(long currentByteStart) {
+		this.currentByteStart = currentByteStart;
+		
 	}
 	
 }// end class EmployeeDetails
