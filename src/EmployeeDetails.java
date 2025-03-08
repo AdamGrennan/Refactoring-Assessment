@@ -19,13 +19,9 @@ import java.awt.event.KeyEvent;
 import java.awt.event.WindowEvent;
 import java.awt.event.WindowListener;
 import java.io.File;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.StandardCopyOption;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Random;
 import java.util.Vector;
 
 import javax.swing.BorderFactory;
@@ -33,7 +29,6 @@ import javax.swing.DefaultListCellRenderer;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JComboBox;
-import javax.swing.JFileChooser;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JMenu;
@@ -47,24 +42,17 @@ import javax.swing.KeyStroke;
 import javax.swing.UIManager;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
-import javax.swing.filechooser.FileNameExtensionFilter;
 
 import net.miginfocom.swing.MigLayout;
 
 public class EmployeeDetails extends JFrame implements ActionListener, ItemListener, DocumentListener, WindowListener {
 
 	// decimal format for inactive currency text field
-	private static final DecimalFormat format = new DecimalFormat("\u20ac ###,###,##0.00");
 	// decimal format for active currency text field
 	private static final DecimalFormat fieldFormat = new DecimalFormat("0.00");
 	// hold object start position in file
 	private long currentByteStart = 0;
 	RandomFile application = RandomFile.getInstance();
-	// display files in File Chooser only with extension .dat
-	private FileNameExtensionFilter datfilter = new FileNameExtensionFilter("dat files (*.dat)", "dat");
-	// hold file name and path for current file in use
-	private File file;
-	// holds true or false if any changes are made for text fields
 	private boolean change = false;
 	// holds true or false if any changes are made for file content
 	boolean changesMade = false;
@@ -91,6 +79,13 @@ public class EmployeeDetails extends JFrame implements ActionListener, ItemListe
 
 	private List<Observer> observers = new ArrayList<Observer>();
 	CommandInvoker invoker = new CommandInvoker();
+	private FileManager fileManager;
+	private File file;
+
+	public EmployeeDetails() {
+		 fileManager = new FileManager(this);
+		 file = fileManager.getFile();
+	}
 	
 	public void updateView() {
 	    displayRecords(currentEmployee);
@@ -99,6 +94,19 @@ public class EmployeeDetails extends JFrame implements ActionListener, ItemListe
 	public Employee getCurrentEmployee() {
 	    return currentEmployee;
 	}
+	
+	public long getCurrentByteStart() {
+	    return currentByteStart;
+	}
+	
+	public String getIdFieldText() {
+	    return idField.getText();
+	}
+	
+	public boolean hasChanges() {
+	    return change;  
+	}
+
 
 	public void attach(Observer observer){ observers.add(observer); }
 	public void detach(Observer o){observers.remove(o);}
@@ -330,6 +338,7 @@ public class EmployeeDetails extends JFrame implements ActionListener, ItemListe
 		return empDetails;
 		
 	}// end detailsPanel
+	
 
 	private void displayEmployeeSummaryDialog() {
 		// display Employee summary dialog if these is someone to display
@@ -524,7 +533,7 @@ public class EmployeeDetails extends JFrame implements ActionListener, ItemListe
 	}// end getNextFreeId
 
 	// get values from text fields and create Employee object
-	private Employee getChangedDetails() {
+	public Employee getChangedDetails() {
 		boolean fullTime = false;
 		Employee theEmployee;
 		if (((String) fullTimeCombo.getSelectedItem()).equalsIgnoreCase("Yes"))
@@ -621,6 +630,10 @@ public class EmployeeDetails extends JFrame implements ActionListener, ItemListe
 
 	// check if any of records in file is active - ID is not 0
 	private boolean isSomeoneToDisplay() {
+		  if (fileManager.getFile() == null || !file.exists()) {
+		        JOptionPane.showMessageDialog(null, "No file selected or file does not exist!");
+		        return false;
+		    }
 		boolean someoneToDisplay = false;
 		// open file for reading
 		application.openReadFile(file.getAbsolutePath());
@@ -642,6 +655,7 @@ public class EmployeeDetails extends JFrame implements ActionListener, ItemListe
 		}
 		return someoneToDisplay;
 	}// end isSomeoneToDisplay
+	
 
 	// check for correct PPS format and look if PPS already in use
 	public boolean correctPps(String pps, long currentByte) {
@@ -668,17 +682,6 @@ public class EmployeeDetails extends JFrame implements ActionListener, ItemListe
 		return ppsExist;
 	}// end correctPPS
 
-	// check if file name has extension .dat
-	private boolean checkFileName(File fileName) {
-		boolean checkFile = false;
-		int length = fileName.toString().length();
-
-		// check if last characters in file name is .dat
-		if (fileName.toString().charAt(length - 4) == '.' && fileName.toString().charAt(length - 3) == 'd'
-				&& fileName.toString().charAt(length - 2) == 'a' && fileName.toString().charAt(length - 1) == 't')
-			checkFile = true;
-		return checkFile;
-	}// end checkFileName
 
 	// check if any changes text field where made
 	private boolean checkForChanges() {
@@ -788,73 +791,6 @@ public class EmployeeDetails extends JFrame implements ActionListener, ItemListe
 		searchSurname.setEnabled(search);
 	}// end setEnabled
 
-	// open file
-	private void openFile() {
-		final JFileChooser fc = new JFileChooser();
-		fc.setDialogTitle("Open");
-		// display files in File Chooser only with extension .dat
-		fc.setFileFilter(datfilter);
-		File newFile; // holds opened file name and path
-		// if old file is not empty or changes has been made, offer user to save
-		// old file
-		if (file.length() != 0 || change) {
-			int returnVal = JOptionPane.showOptionDialog(frame, "Do you want to save changes?", "Save",
-					JOptionPane.YES_NO_OPTION, JOptionPane.INFORMATION_MESSAGE, null, null, null);
-			// if user wants to save file, save it
-			if (returnVal == JOptionPane.YES_OPTION) {
-				saveFile();// save file
-			} // end if
-		} // end if
-
-		int returnVal = fc.showOpenDialog(EmployeeDetails.this);
-		// if file been chosen, open it
-		if (returnVal == JFileChooser.APPROVE_OPTION) {
-			newFile = fc.getSelectedFile();
-			// if old file wasn't saved and its name is generated file name,
-			// delete this file
-			if (file.getName().equals(generatedFileName))
-				file.delete();// delete file
-			file = newFile;// assign opened file to file
-			// open file for reading
-			application.openReadFile(file.getAbsolutePath());
-			firstRecord();// look for first record
-			displayRecords(currentEmployee);
-			application.closeReadFile();// close file for reading
-		} // end if
-	}// end openFile
-
-	// save file
-	private void saveFile() {
-		// if file name is generated file name, save file as 'save as' else save
-		// changes to file
-		if (file.getName().equals(generatedFileName))
-			saveFileAs();// save file as 'save as'
-		else {
-			// if changes has been made to text field offer user to save these
-			// changes
-			if (change) {
-				int returnVal = JOptionPane.showOptionDialog(frame, "Do you want to save changes?", "Save",
-						JOptionPane.YES_NO_OPTION, JOptionPane.INFORMATION_MESSAGE, null, null, null);
-				// save changes if user choose this option
-				if (returnVal == JOptionPane.YES_OPTION) {
-					// save changes if ID field is not empty
-					if (!idField.getText().equals("")) {
-						// open file for writing
-						application.openWriteFile(file.getAbsolutePath());
-						// get changes for current Employee
-						currentEmployee = getChangedDetails();
-						// write changes to file for corresponding Employee
-						// record
-						application.changeRecords(currentEmployee, currentByteStart);
-						application.closeWriteFile();// close file for writing
-					} // end if
-				} // end if
-			} // end if
-
-			displayRecords(currentEmployee);
-			setEnabled(false);
-		} // end else
-	}// end saveFile
 
 	// save changes to current Employee
 	private void saveChanges() {
@@ -875,119 +811,25 @@ public class EmployeeDetails extends JFrame implements ActionListener, ItemListe
 		setEnabled(false);
 	}// end saveChanges
 
-	// save file as 'save as'
-	private void saveFileAs() {
-		final JFileChooser fc = new JFileChooser();
-		File newFile;
-		String defaultFileName = "new_Employee.dat";
-		fc.setDialogTitle("Save As");
-		// display files only with .dat extension
-		fc.setFileFilter(datfilter);
-		fc.setApproveButtonText("Save");
-		fc.setSelectedFile(new File(defaultFileName));
 
-		int returnVal = fc.showSaveDialog(EmployeeDetails.this);
-		// if file has chosen or written, save old file in new file
-		if (returnVal == JFileChooser.APPROVE_OPTION) {
-			newFile = fc.getSelectedFile();
-			// check for file name
-			if (!checkFileName(newFile)) {
-				// add .dat extension if it was not there
-				newFile = new File(newFile.getAbsolutePath() + ".dat");
-				// create new file
-				application.createFile(newFile.getAbsolutePath());
-			} // end id
-			else
-				// create new file
-				application.createFile(newFile.getAbsolutePath());
 
-			try {// try to copy old file to new file
-				Files.copy(file.toPath(), newFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
-				// if old file name was generated file name, delete it
-				if (file.getName().equals(generatedFileName))
-					file.delete();// delete file
-				file = newFile;// assign new file to file
-			} // end try
-			catch (IOException e) {
-			} // end catch
-		} // end if
-		changesMade = false;
-	}// end saveFileAs
+	
 
-	// allow to save changes to file when exiting the application
-	private void exitApp() {
-		// if file is not empty allow to save changes
-		if (file.length() != 0) {
-			if (changesMade) {
-				int returnVal = JOptionPane.showOptionDialog(frame, "Do you want to save changes?", "Save",
-						JOptionPane.YES_NO_CANCEL_OPTION, JOptionPane.INFORMATION_MESSAGE, null, null, null);
-				// if user chooses to save file, save file
-				if (returnVal == JOptionPane.YES_OPTION) {
-					saveFile();// save file
-					// delete generated file if user saved details to other file
-					if (file.getName().equals(generatedFileName))
-						file.delete();// delete file
-					System.exit(0);// exit application
-				} // end if
-					// else exit application
-				else if (returnVal == JOptionPane.NO_OPTION) {
-					// delete generated file if user chooses not to save file
-					if (file.getName().equals(generatedFileName))
-						file.delete();// delete file
-					System.exit(0);// exit application
-				} // end else if
-			} // end if
-			else {
-				// delete generated file if user chooses not to save file
-				if (file.getName().equals(generatedFileName))
-					file.delete();// delete file
-				System.exit(0);// exit application
-			} // end else
-				// else exit application
-		} else {
-			// delete generated file if user chooses not to save file
-			if (file.getName().equals(generatedFileName))
-				file.delete();// delete file
-			System.exit(0);// exit application
-		} // end else
-	}// end exitApp
 
-	// generate 20 character long file name
-	private String getFileName() {
-		String fileNameChars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890_-";
-		StringBuilder fileName = new StringBuilder();
-		Random rnd = new Random();
-		// loop until 20 character long file name is generated
-		while (fileName.length() < 20) {
-			int index = (int) (rnd.nextFloat() * fileNameChars.length());
-			fileName.append(fileNameChars.charAt(index));
-		}
-		String generatedfileName = fileName.toString();
-		return generatedfileName;
-	}// end getFileName
-
-	// create file with generated file name when application is opened
-	private void createRandomFile() {
-		generatedFileName = getFileName() + ".dat";
-		// assign generated file name to file
-		file = new File(generatedFileName);
-		// create file
-		application.createFile(file.getName());
-	}// end createRandomFile
 
 	public void actionPerformed(ActionEvent e) {
 	    Command command = null; 
 	    boolean validInput = checkInput() && !checkForChanges();
 
 	    if (e.getSource() == closeApp) {
-	        if (validInput) exitApp();
+	        if (validInput) fileManager.exitApp();
 	    } else if (e.getSource() == open) {
-	        if (validInput) openFile();
+	        if (validInput) fileManager.openFile();
 	    } else if (e.getSource() == save) {
-	        if (validInput) saveFile();
+	        if (validInput) fileManager.saveFile();
 	        change = false;
 	    } else if (e.getSource() == saveAs) {
-	        if (validInput) saveFileAs();
+	        if (validInput) fileManager.saveFileAs();
 	        change = false;
 	    } else if (e.getSource() == searchById) {
 	        if (validInput) displaySearchByIdDialog();
@@ -1032,7 +874,7 @@ public class EmployeeDetails extends JFrame implements ActionListener, ItemListe
 	// content pane for main dialog
 	private void createContentPane() {
 		setTitle("Employee Details");
-		createRandomFile();// create random file name
+		fileManager.createRandomFile();// create random file name
 		JPanel dialog = new JPanel(new MigLayout());
 
 		setJMenuBar(menuBar());// add menu bar to frame
@@ -1093,7 +935,7 @@ public class EmployeeDetails extends JFrame implements ActionListener, ItemListe
 	// WindowsListener methods
 	public void windowClosing(WindowEvent e) {
 		// exit application
-		exitApp();
+		fileManager.exitApp();
 	}
 
 	public void windowActivated(WindowEvent e) {
